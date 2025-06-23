@@ -1,0 +1,165 @@
+#!/usr/bin/python3
+
+import os
+import pathlib
+import re
+import requests
+
+from common import (
+    upsert_repo, sqlite_db, make_common_schema, scalar,
+    get_environ, analyse,
+)
+
+BASE_DIRECTORY = pathlib.Path(__file__).resolve().parent
+CLONE_DIRECTORY = BASE_DIRECTORY / "analyse"
+OUTPUT_DIRECTORY = BASE_DIRECTORY / "output"
+CONFIG_FILE = BASE_DIRECTORY / "config.yml"
+
+
+def normalize_module_name(name):
+    return name.lower().replace(" ", "_").replace("__", "_").strip("_")
+
+
+def analyse_pr(version, pull):
+    """Analyse a pull request and return a dict of module name and its data."""
+    result = {}
+    title = pull["title"]
+    re_module = re.compile(r"\[([0-9.]*)\]\s*\[(ADD|MIG)]\s*([^:]+)")
+    match = re_module.search(title)
+    if not match:
+        return result
+    base_version = match.groups()[0]
+    if version != base_version:
+        return result
+    module = normalize_module_name(match.groups()[2])
+    result[module] = {
+        "title": title,
+        "author": pull["user"]["login"],
+        "url": pull["html_url"],
+        "state": pull["state"],
+        "number": pull["number"],
+        "body": pull["body"],
+        "draft": pull["draft"],
+    }
+    return result
+
+
+def analyse_repo(path, org, repo, version, analyse_pr):
+    """Call github api to get the list of pull requests."""
+    github_token = os.environ.get("GITHUB_TOKEN")
+    if github_token:
+        headers = {"authorization": f"Bearer {github_token}"}
+    else:
+        headers = {}
+
+    result = {}
+    page = 1
+    while True:
+        r = requests.get(
+            f"https://api.github.com/repos/{org}/{repo}/pulls?page={page}&per_page=100",
+            headers=headers
+        )
+        page += 1
+        if r.status_code != 200:
+            print(f"Fail to fetch repo {org}/{repo}\n{r.text}")
+            raise requests.RequestException()
+        data = r.json()
+        if not data:
+            break
+        for pull in data:
+            result.update(analyse_pr(version, pull))
+    return result
+
+
+def make_schema(db):
+    """Create the database schema."""
+    print("Creating database schema (if not exists)")
+    db.execute("PRAGMA foreign_keys = ON")
+    make_common_schema(db, with_module=False)
+    db.execute(
+        """
+        CREATE TABLE IF NOT EXISTS "pr" (
+            id INTEGER PRIMARY KEY,
+            repo_id INTEGER,
+            module TEXT,
+            title TEXT,
+            author TEXT,
+            url TEXT,
+            state TEXT,
+            number INTEGER,
+            body TEXT,
+            draft BOOLEAN,
+            FOREIGN KEY(repo_id) REFERENCES repo(id),
+            UNIQUE(repo_id, module)
+        )
+        """
+    )
+
+
+def upsert_module(db, repo_id, module_name, module_data):
+    return scalar(
+        db,
+        """
+        INSERT INTO pr (repo_id, module, title, author, url, state, number,
+            body, draft)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(repo_id, module)
+        DO UPDATE SET
+            title = EXCLUDED.title,
+            author = EXCLUDED.author,
+            url = EXCLUDED.url,
+            state = EXCLUDED.state,
+            number = EXCLUDED.number,
+            body = EXCLUDED.body,
+            draft = EXCLUDED.draft
+        RETURNING id
+        """,
+        repo_id,
+        module_name,
+        module_data["title"],
+        module_data["author"],
+        module_data["url"],
+        module_data["state"],
+        module_data["number"],
+        module_data["body"],
+        module_data["draft"],
+    )
+
+
+def process_repo(db, org, repo, version, path, result):
+    repo_id = scalar(
+        db,
+        """
+        SELECT id FROM repo WHERE org = ? AND repo = ?
+        """,
+        org,
+        repo,
+    )
+    if repo_id:
+        print(f"Skipping {org}/{repo}")
+        return
+    result[org][repo] = analyse_repo(path, org, repo, version, analyse_pr)
+    repo_id = upsert_repo(db, org, repo)
+    for module_name, module_data in result[org][repo].items():
+        upsert_module(db, repo_id, module_name, module_data)
+
+
+def main():
+    config, version, restrict, clean_db = get_environ(CONFIG_FILE)
+    OUTPUT_DIRECTORY.mkdir(exist_ok=True)
+    CLONE_DIRECTORY.mkdir(exist_ok=True)
+
+    with sqlite_db(
+        OUTPUT_DIRECTORY / f"prs_{version}.db", make_schema,
+        clean=clean_db
+    ) as db:
+        try:
+            result = analyse(
+                db, CLONE_DIRECTORY, config, version, restrict, process_repo
+            )
+        except requests.RequestException:
+            pass
+
+
+if __name__ == "__main__":
+    main()
