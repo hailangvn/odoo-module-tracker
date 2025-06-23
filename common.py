@@ -2,7 +2,7 @@ import ast
 import contextlib
 import os
 import requests
-import sqlite3
+import pysqlite3 as sqlite3
 import subprocess
 import yaml
 
