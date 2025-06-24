@@ -52,8 +52,8 @@ def upsert_module(db, repo_id, module_name, module_data):
     return scalar(
         db,
         """
-        INSERT INTO module (repo_id, name, title, author, depends, maintainers, development_status, summary)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO module (repo_id, name, title, author, depends, maintainers, development_status, summary, last_version)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(repo_id, name)
         DO UPDATE SET
             title = EXCLUDED.title,
@@ -61,7 +61,8 @@ def upsert_module(db, repo_id, module_name, module_data):
             depends = EXCLUDED.depends,
             maintainers = EXCLUDED.maintainers,
             development_status = EXCLUDED.development_status,
-            summary = EXCLUDED.summary
+            summary = EXCLUDED.summary,
+            last_version = EXCLUDED.last_version
         RETURNING id
         """,
         repo_id,
@@ -72,6 +73,7 @@ def upsert_module(db, repo_id, module_name, module_data):
         ",".join(module_data["maintainers"]),
         module_data["development_status"],
         module_data["summary"],
+        module_data["last_version"],
     )
 
 

@@ -59,6 +59,7 @@ def analyse_module(path):
         "development_status": data.get("development_status"),
         "summary": data.get("summary"),
         "description": description,
+        "last_version": data["version"],
     }
 
 
@@ -114,6 +115,7 @@ def make_common_schema(db, with_module):
                 maintainers TEXT,
                 development_status TEXT,
                 summary TEXT,
+                last_version TEXT,
                 FOREIGN KEY(repo_id) REFERENCES repo(id)
                 UNIQUE(repo_id, name)
             )
