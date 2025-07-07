@@ -1,0 +1,2 @@
+VERSIONS = '12.0,13.0,14.0,15.0,16.0,17.0,18.0'
+DB_PATH = '/media/root1/code/trobz/services/odoo-module-tracker-api/var/'

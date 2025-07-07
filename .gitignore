@@ -1,4 +1,5 @@
-# Local folder
+# Local file and folder
+config.py
 analyse/
 output/
 

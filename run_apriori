@@ -1,0 +1,92 @@
+#!/usr/bin/python3
+
+import ast
+import contextlib
+import pathlib
+import pysqlite3 as sqlite3
+import requests
+
+from config import VERSIONS, DB_PATH
+
+db_path = pathlib.Path(DB_PATH) / "apriori.db"
+
+
+def get_url(version):
+    compare_version = ('0' if len(version) < 4 else '') + version
+    if compare_version <= '09.0':
+        raise ValueError(f"Version {version} is not supported")
+    elif compare_version <= '13.0':
+        return f'https://github.com/OCA/OpenUpgrade/raw/refs/heads/{version}/odoo/addons/openupgrade_records/lib/apriori.py'
+    else:
+        return f'https://github.com/oca/OpenUpgrade/raw/refs/heads/{version}/openupgrade_scripts/apriori.py'
+
+
+def make_schema(db):
+    db.execute(
+        """
+        CREATE TABLE IF NOT EXISTS renamed_modules (
+            id INTEGER PRIMARY KEY,
+            version TEXT,
+            old_name TEXT,
+            new_name TEXT,
+            UNIQUE(version, old_name)
+        )
+        """
+    )
+    db.execute(
+        """
+        CREATE TABLE IF NOT EXISTS merged_modules (
+            id INTEGER PRIMARY KEY,
+            version TEXT,
+            from_name TEXT,
+            to_name TEXT,
+            UNIQUE(version, from_name)
+        )
+        """
+    )
+
+
+@contextlib.contextmanager
+def sqlite_db(path, clean=False):
+    """Context manager for the sqlite database."""
+    if clean and path.exists():
+        path.unlink()
+    conn = sqlite3.connect(path)
+    db = conn.cursor()
+    make_schema(db)
+    try:
+        yield db
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def main():
+    versions = VERSIONS.split(',')
+    with sqlite_db(db_path, clean=True) as db:
+        for version in versions:
+            version = version.strip()
+            try:
+                url = get_url(version)
+            except ValueError:
+                continue
+            r = requests.get(url)
+            r.raise_for_status()
+            _globals = {}
+            _locals = {}
+            exec(r.text, _globals, _locals)
+            for old_name, new_name in _locals['renamed_modules'].items():
+                db.execute(
+                    'INSERT INTO renamed_modules (version, old_name, new_name) '
+                    'VALUES (?, ?, ?)',
+                    (version, old_name, new_name)
+                )
+            for from_name, to_name in _locals['merged_modules'].items():
+                db.execute(
+                    'INSERT INTO merged_modules (version, from_name, to_name) '
+                    'VALUES (?, ?, ?)',
+                    (version, from_name, to_name)
+                )
+
+if __name__ == '__main__':
+    main()
