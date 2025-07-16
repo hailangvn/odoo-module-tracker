@@ -116,6 +116,7 @@ def make_common_schema(db, with_module):
                 development_status TEXT,
                 summary TEXT,
                 last_version TEXT,
+                dep_tree TEXT,
                 FOREIGN KEY(repo_id) REFERENCES repo(id)
                 UNIQUE(repo_id, name)
             )

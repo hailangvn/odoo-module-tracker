@@ -1,0 +1,96 @@
+#!/usr/bin/python3
+
+import os
+import pathlib
+import re
+
+from config import MANIFESTOO_PATH
+from common import (
+    sqlite_db, analyse_repo, make_common_schema, scalar, run_read,
+    get_environ, analyse,
+)
+
+BASE_DIRECTORY = pathlib.Path(__file__).resolve().parent
+CLONE_DIRECTORY = BASE_DIRECTORY / "analyse"
+OUTPUT_DIRECTORY = BASE_DIRECTORY / "output"
+CONFIG_FILE = BASE_DIRECTORY / "config.yml"
+
+
+def analyse_dep_tree(path):
+    if not path.is_dir() or not (path / "__manifest__.py").exists():
+        return {}
+    paths = []
+    for org in CLONE_DIRECTORY.iterdir():
+        for repo in org.iterdir():
+            if any([
+                module for module in repo.iterdir()
+                if (module / "__manifest__.py").exists()
+            ]):
+                paths.append(repo)
+    addon_path = ",".join([str(p) for p in paths])
+    dep_tree = run_read(
+        path, f"{MANIFESTOO_PATH}manifestoo",
+        "--no-addons-path-from-import-odoo", "--odoo-series", version,
+        "--addons-path", addon_path, "--select", path.name, "tree"
+    )
+    return {
+        "name": path.name,
+        "dep_tree": dep_tree,
+    }
+
+
+def make_schema(db):
+    """Create the database schema."""
+    print("Creating database schema (if not exists)")
+    db.execute("PRAGMA foreign_keys = ON")
+    make_common_schema(db, with_module=True)
+
+
+def upsert_module(db, repo_id, module_name, module_data):
+    return scalar(
+        db,
+        """
+        INSERT INTO module (repo_id, name, dep_tree)
+        VALUES (?, ?, ?)
+        ON CONFLICT(repo_id, name)
+        DO UPDATE SET
+            dep_tree = EXCLUDED.dep_tree
+        RETURNING id
+        """,
+        repo_id,
+        module_name,
+        module_data["dep_tree"],
+    )
+
+
+def process_repo(db, org, repo, version, path, result):
+    repo_id = scalar(
+        db,
+        """
+        SELECT id FROM repo WHERE org = ? AND repo = ?
+        """,
+        org,
+        repo,
+    )
+    result[org][repo] = analyse_repo(path, analyse_dep_tree)
+    for module_name, module_data in result[org][repo].items():
+        upsert_module(db, repo_id, module_name, module_data)
+
+
+def main():
+    config, curr_version, restrict, clean_db = get_environ(CONFIG_FILE)
+    global version
+    version = curr_version
+    OUTPUT_DIRECTORY.mkdir(exist_ok=True)
+    CLONE_DIRECTORY.mkdir(exist_ok=True)
+
+    with sqlite_db(
+        OUTPUT_DIRECTORY / f"{version}.db", make_schema, clean=False
+    ) as db:
+        result = analyse(
+            db, CLONE_DIRECTORY, config, version, restrict, process_repo
+        )
+
+
+if __name__ == "__main__":
+    main()
