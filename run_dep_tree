@@ -19,7 +19,7 @@ CONFIG_FILE = BASE_DIRECTORY / "config.yml"
 def analyse_dep_tree(path):
     if not path.is_dir() or not (path / "__manifest__.py").exists():
         return {}
-    paths = []
+    paths = [ODOO_PATH, ENT_PATH]
     for org in CLONE_DIRECTORY.iterdir():
         for repo in org.iterdir():
             if any([
@@ -81,6 +81,10 @@ def main():
     config, curr_version, restrict, clean_db = get_environ(CONFIG_FILE)
     global version
     version = curr_version
+    global ODOO_PATH
+    global ENT_PATH
+    ODOO_PATH = pathlib.Path(f'~/code/odoo/odoo/{version}/addons').expanduser()
+    ENT_PATH = pathlib.Path(f'~/code/odoo/enterprise/{version}').expanduser()
     OUTPUT_DIRECTORY.mkdir(exist_ok=True)
     CLONE_DIRECTORY.mkdir(exist_ok=True)
 

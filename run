@@ -68,7 +68,9 @@ def upsert_module(db, repo_id, module_name, module_data):
         repo_id,
         module_name,
         module_data["name"],
-        module_data["author"],
+        ",".join(module_data["author"])
+        if type(module_data["author"]) == list
+        else module_data["author"],
         ",".join(module_data["depends"]),
         ",".join(module_data["maintainers"]),
         module_data["development_status"],
@@ -78,7 +80,8 @@ def upsert_module(db, repo_id, module_name, module_data):
 
 
 def upsert_commit(
-    db, repo_id, commit_hash, commit_date, commit_author, commit_mail, commit_message
+    db, repo_id, commit_hash, commit_date, commit_author, commit_mail,
+    commit_message
 ):
     """Get the commit id from the database, or insert it if it doesn't exist."""
     return scalar(
@@ -133,13 +136,15 @@ def fetch_last_commit(db, repo_id):
     )
 
 
-def analyse_commits(db, repo_id, path, modules):
+def analyse_commits(db, org, repo_id, path, modules):
     """Analyse the commits of a repo and store it in the database."""
     # Update modules
     module_ids = {
         module_name: upsert_module(db, repo_id, module_name, module_data)
         for module_name, module_data in modules.items()
     }
+    if org == "odoo":
+        return
 
     last_commit = fetch_last_commit(db, repo_id)
     target = f"{last_commit}..HEAD" if last_commit else "HEAD"
@@ -163,7 +168,8 @@ def analyse_commits(db, repo_id, path, modules):
             "\x18", 3
         )
         commit_id = upsert_commit(
-            db, repo_id, commit, commit_date, commit_author, commit_mail, commit_message
+            db, repo_id, commit, commit_date, commit_author, commit_mail,
+            commit_message,
         )
         modules = {
             module
@@ -177,7 +183,9 @@ def analyse_commits(db, repo_id, path, modules):
 
 def process_repo(db, org, repo, version, path, result):
     result[org][repo] = analyse_repo(path, analyse_module)
-    analyse_commits(db, upsert_repo(db, org, repo), path, result[org][repo])
+    analyse_commits(
+        db, org, upsert_repo(db, org, repo), path, result[org][repo]
+    )
 
 
 def main():
@@ -197,6 +205,15 @@ def main():
         result = analyse(
             db, CLONE_DIRECTORY, config, version, restrict, process_repo
         )
+        result["odoo"] = {}
+        odoo_path = pathlib.Path(
+            f'~/code/odoo/odoo/{version}/addons'
+        ).expanduser()
+        process_repo(db, "odoo", "odoo", version, odoo_path, result)
+        enterprise_path = pathlib.Path(
+            f'~/code/odoo/enterprise/{version}'
+        ).expanduser()
+        process_repo(db, "odoo", "enterprise", version, enterprise_path, result)
 
     data = yaml.safe_dump(result)
     with open(OUTPUT_DIRECTORY / f"{version}.yml", "w") as output:
