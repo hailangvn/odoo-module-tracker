@@ -17,18 +17,44 @@ CONFIG_FILE = BASE_DIRECTORY / "config.yml"
 
 
 def normalize_module_name(name):
-    return name.lower().replace(" ", "_").replace("__", "_").strip("_")
+    return name.lower().replace(" ", "_").replace("-", "_").replace(
+        "__", "_"
+    ).replace("'", "").replace("`", "").strip("_")
+
+
+pr_res = [
+    re.compile(
+        r"\[([0-9.]*)*\]\s*\[(ADD|MIG|mig)\]\s*[-:]\s*([a-z0-9_]+)"
+    ),
+    re.compile(
+        r"\[*([0-9.]*)*\]*\s*\[*(ADD|MIG|mig)\]*(\s*\[[^]]*\])*\s*"
+        r" [Mm]igration( of)*\s+([a-z0-9_]+)"
+    ),
+    re.compile(
+        r"\[(ADD|MIG|mig)\]\s*([0-9.]*)-(add|mig)-([a-z0-9_\-]+)"
+    ),
+    re.compile(
+        r"\[*([0-9.]*)*\]*\s*\[*(ADD|MIG|mig)(\+IMP)*\]*(\s*\[[^]]*\])*\s*"
+        r"([Nn]ew\s*)*(module\s*)*([^:*.,\(\[>\-/&…]+) [Mm]igration"
+    ),
+    re.compile(
+        r"\[*([0-9.]*)*\]*\s*\[*(ADD|MIG|mig)(\+IMP)*\]*(\s*\[[^]]*\])*\s*"
+        r"([Nn]ew\s*)*(module\s*)*([^:*.,\(\[>\-/&…]+)"
+    ),
+    re.compile(
+        r"\[([0-9.]*)*\]\s*\[(BPRT)\]\s*([^:]+)"
+    ),
+]
 
 
 def analyse_pr(version, pull):
     """Analyse a pull request and return a dict of module name and its data."""
     result = {}
     title = pull["title"]
-    re_module = re.compile(
-        r"\[*([0-9.]*)*\]*\s*\[*(ADD|MIG|mig)\]*(\s*\[[^]]*\])*\s*"
-        r"([Nn]ew\s*)*(module\s*)*([^:.,]+)"
-    )
-    match = re_module.search(title)
+    for re_module in pr_res:
+        match = re_module.search(title)
+        if match:
+            break
     if not match:
         return result
     module = normalize_module_name(match.groups()[-1])
