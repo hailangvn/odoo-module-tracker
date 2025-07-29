@@ -1,0 +1,26 @@
+pr,title,expected_values
+https://github.com/OCA/project/pull/987,[12.0][MIG] sale_order_project: migration to 12.0,sale_order_project
+https://github.com/OCA/project/pull/699,[12.0][ADD] project_leverage,project_leverage
+https://github.com/OCA/project/pull/698,[ADD][12.0]project_earned_value,project_earned_value
+https://github.com/OCA/project/pull/685,[12.0] [ADD] project_rating_nps module,project_rating_nps
+https://github.com/OCA/project/pull/864,[12.0][IMP] project_task_code: Added a migration script that will 'uniqify'…,
+https://github.com/OCA/project/pull/829,[12.0] ADD project_timesheet_time_control_sale,project_timesheet_time_control_sale
+https://github.com/OCA/project/pull/775,[ADD] Added a project_mail_chatter module.,project_mail_chatter
+https://github.com/OCA/project/pull/680,[MIG][12.0] project_task_category: Migration to 12.0.,project_task_category
+https://github.com/OCA/project/pull/622,[ADD] Added project_template_task_material Module,project_template_task_material
+https://github.com/OCA/project/pull/572,12.0 mig project task material stock,project task material stock
+https://github.com/OCA/project/pull/487,[12.0][MIG] Migrate project_task_category from 10.0 to 12.0,project_task_category
+https://github.com/OCA/project/pull/506,[ADD Project Task Date Shift Module,Project Task Date Shift
+https://github.com/OCA/project/pull/438,[12.0][MIG]project_description,project_description
+https://github.com/OCA/project/pull/666,[FIX][12.0] project_category can now be migrated from 11.0 to 12.0,
+https://github.com/OCA/project/pull/580,[ADD] Project Budget Change Order,Project Budget Change Order
+https://github.com/OCA/e-commerce/pull/1077,[16.0][ADD+MIG] website_sale_affiliate_portal : Display affiliations to the portal user,website_sale_affiliate_portal 
+https://github.com/OCA/sale-workflow/pull/1566,[13.0][MIG+REF] sale_manual_delivery,sale_manual_delivery
+https://github.com/akretion/ak-odoo-incubator/pull/248,[ADD] 14.0 account move line export reconcile info,account move line export reconcile info
+https://github.com/OCA/event/pull/399,[MIG] 16.0 : event_registration_cancel_reason,event_registration_cancel_reason
+https://github.com/OCA/sale-workflow/pull/1701,[MIG]: migrated sale_fixed_discount module,sale_fixed_discount
+https://github.com/OCA/l10n-brazil/pull/3834,[16.0][MIG][l10n_br_sped_ecf],l10n_br_sped_ecf
+https://github.com/OCA/pos/pull/1252,[17.0][ADD]: Improve pos_order_to_sale_order,
+https://github.com/OCA/account-analytic/pull/596,[15.0][ADD]account_analytic_ap_ar and recompute_payment_terms_lines_hook,account_analytic_ap_ar
+https://github.com/OCA/server-tools/pull/2359,"[WIP][12.0][ADD] Add base_external modules, use Odoo to administer data in external API",base_external
+https://github.com/OCA/event/pull/327,[15.0] [ADD] Add module website_event_sale_constraints_single_attendee,website_event_sale_constraints_single_attendee

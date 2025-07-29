@@ -2,13 +2,13 @@
 
 import os
 import pathlib
-import re
 import requests
 
 from common import (
     upsert_repo, sqlite_db, make_common_schema, scalar,
     get_environ, analyse,
 )
+from pr_res import pr_res, catchall_res
 
 BASE_DIRECTORY = pathlib.Path(__file__).resolve().parent
 CLONE_DIRECTORY = BASE_DIRECTORY / "analyse"
@@ -22,31 +22,6 @@ def normalize_module_name(name):
     ).replace("'", "").replace("`", "").strip("_")
 
 
-pr_res = [
-    re.compile(
-        r"\[([0-9.]*)*\]\s*\[(ADD|MIG|mig)\]\s*[-:]\s*([a-z0-9_]+)"
-    ),
-    re.compile(
-        r"\[*([0-9.]*)*\]*\s*\[*(ADD|MIG|mig)\]*(\s*\[[^]]*\])*\s*"
-        r" [Mm]igration( of)*\s+([a-z0-9_]+)"
-    ),
-    re.compile(
-        r"\[(ADD|MIG|mig)\]\s*([0-9.]*)-(add|mig)-([a-z0-9_\-]+)"
-    ),
-    re.compile(
-        r"\[*([0-9.]*)*\]*\s*\[*(ADD|MIG|mig)(\+IMP)*\]*(\s*\[[^]]*\])*\s*"
-        r"([Nn]ew\s*)*(module\s*)*([^:*.,\(\[>\-/&…]+) [Mm]igration"
-    ),
-    re.compile(
-        r"\[*([0-9.]*)*\]*\s*\[*(ADD|MIG|mig)(\+IMP)*\]*(\s*\[[^]]*\])*\s*"
-        r"([Nn]ew\s*)*(module\s*)*([^:*.,\(\[>\-/&…]+)"
-    ),
-    re.compile(
-        r"\[([0-9.]*)*\]\s*\[(BPRT)\]\s*([^:]+)"
-    ),
-]
-
-
 def analyse_pr(version, pull):
     """Analyse a pull request and return a dict of module name and its data."""
     result = {}
@@ -58,6 +33,15 @@ def analyse_pr(version, pull):
     if match:
         module = normalize_module_name(match.groups()[-1])
     else:
+        for re_module in catchall_res:
+            match_catchall = re_module.search(title)
+            if match_catchall:
+                break
+        if match_catchall:
+            print(
+                'catchall', pull["html_url"], title,
+                match_catchall.groups()[-1],
+            )
         module = pull["number"]
     result[module] = {
         "title": title,
