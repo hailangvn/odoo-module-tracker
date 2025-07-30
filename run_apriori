@@ -6,6 +6,7 @@ import pathlib
 import pysqlite3 as sqlite3
 import requests
 
+from common import download
 from config import VERSIONS, DB_PATH
 
 db_path = pathlib.Path(DB_PATH) / "apriori.db"
@@ -87,6 +88,9 @@ def main():
                     'VALUES (?, ?, ?)',
                     (version, from_name, to_name)
                 )
+    csv_path = pathlib.Path(DB_PATH) / 'trobz_apriori.csv'
+    url = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vQQPg-CF4wTQ6r-gVqp27wAQ-69smaKG0EZ43jmugfRfwEbcwVTj-CBzKSr3AO02yHCmH-gZTqT42XA/pub?output=csv'
+    download(csv_path, url)
 
 if __name__ == '__main__':
     main()
