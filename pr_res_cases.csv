@@ -24,3 +24,10 @@ https://github.com/OCA/pos/pull/1252,[17.0][ADD]: Improve pos_order_to_sale_orde
 https://github.com/OCA/account-analytic/pull/596,[15.0][ADD]account_analytic_ap_ar and recompute_payment_terms_lines_hook,account_analytic_ap_ar
 https://github.com/OCA/server-tools/pull/2359,"[WIP][12.0][ADD] Add base_external modules, use Odoo to administer data in external API",base_external
 https://github.com/OCA/event/pull/327,[15.0] [ADD] Add module website_event_sale_constraints_single_attendee,website_event_sale_constraints_single_attendee
+https://github.com/OCA/server-tools/pull/2403,[15.0][MIG] module_change_auto_install : Migration to 15.0,module_change_auto_install 
+https://github.com/OCA/contract/pull/1013,[16.0][ADD] Module contract_invoice_auto_post: to 16.0,contract_invoice_auto_post
+https://github.com/OCA/calendar/pull/117,[16.0][ADD] : Add calendar_event_link_stock_picking,calendar_event_link_stock_picking
+https://github.com/OCA/account-closing/pull/318,[16.0][ADD] account_cutoff_accrual_sale* fixes in case of SO invoiced on order + add support for sale_invoice_policy,account_cutoff_accrual_sale
+https://github.com/OCA/contract/pull/875,[ADD] added migrated contract_sale_generation module,contract_sale_generation
+https://github.com/OCA/sale-workflow/pull/2155,[MIG][12.0] Backport of sale_order_line_menu to 12.0,sale_order_line_menu
+https://github.com/OCA/server-tools/pull/2142,[12.0][MIG][IMP] base_import_security_group,base_import_security_group
