@@ -14,6 +14,13 @@ BASE_DIRECTORY = pathlib.Path(__file__).resolve().parent
 CLONE_DIRECTORY = BASE_DIRECTORY / "analyse"
 OUTPUT_DIRECTORY = BASE_DIRECTORY / "output"
 CONFIG_FILE = BASE_DIRECTORY / "config.yml"
+TOOLING_BASE = {
+    "oca/oca-addons-repo-template": "master",
+    "oca/oca-ci": "master",
+    "oca/oca-port": "main",
+    "oca/odoo-module-migrator": "master",
+    "oca/repo-maintainer-conf": "master",
+}
 
 
 def normalize_module_name(name):
@@ -26,23 +33,27 @@ def analyse_pr(version, pull):
     """Analyse a pull request and return a dict of module name and its data."""
     result = {}
     title = pull["title"]
-    for re_module in pr_res:
-        match = re_module.search(title)
-        if match:
-            break
-    if match:
-        module = normalize_module_name(match.groups()[-1])
-    else:
-        for re_module in catchall_res:
-            match_catchall = re_module.search(title)
-            if match_catchall:
-                break
-        if match_catchall:
-            print(
-                'catchall', pull["html_url"], title,
-                match_catchall.groups()[-1],
-            )
+    if version == "tooling":
         module = pull["number"]
+        match = None
+    else:
+        for re_module in pr_res:
+            match = re_module.search(title)
+            if match:
+                break
+        if match:
+            module = normalize_module_name(match.groups()[-1])
+        else:
+            for re_module in catchall_res:
+                match_catchall = re_module.search(title)
+                if match_catchall:
+                    break
+            if match_catchall:
+                print(
+                    'catchall', pull["html_url"], title,
+                    match_catchall.groups()[-1],
+                )
+            module = pull["number"]
     result[module] = {
         "title": title,
         "author": pull["user"]["login"],
@@ -70,9 +81,12 @@ def analyse_repo(path, org, repo, version, analyse_pr):
     result = {}
     page = 1
     while True:
+        base = TOOLING_BASE[
+            f"{org}/{repo}"
+        ] if version == "tooling" else version
         r = requests.get(
             f"https://api.github.com/repos/{org}/{repo}/pulls?state=all"
-            f"&base={version}&page={page}&per_page=100",
+            f"&base={base}&page={page}&per_page=100",
             headers=headers
         )
         page += 1
@@ -193,8 +207,18 @@ def main():
         clean=clean_db
     ) as db:
         try:
+            if version == "tooling":
+                clone_dir = None
+                config = {}
+                for repo in TOOLING_BASE.keys():
+                    org, repo = repo.split("/", 1)
+                    if org not in config:
+                        config[org] = []
+                    config[org].append(repo)
+            else:
+                clone_dir = CLONE_DIRECTORY
             result = analyse(
-                db, CLONE_DIRECTORY, config, version, restrict, process_repo
+                db, clone_dir, config, version, restrict, process_repo
             )
         except requests.RequestException:
             pass

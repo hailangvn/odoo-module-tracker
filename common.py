@@ -190,11 +190,14 @@ def analyse(db, CLONE_DIRECTORY, config, version, restrict, process_repo):
         for repo in repos:
             if restrict and (org, repo) not in restrict:
                 continue
-            try:
-                path = get_repo(CLONE_DIRECTORY, org, repo, version)
-            except Exception as e:
-                print("Fail to fetch repo skip it.", e)
-                continue
+            if CLONE_DIRECTORY:
+                try:
+                    path = get_repo(CLONE_DIRECTORY, org, repo, version)
+                except Exception as e:
+                    print("Fail to fetch repo skip it.", e)
+                    continue
+            else:
+                path = None
             process_repo(db, org, repo, version, path, result)
 
     return result
