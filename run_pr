@@ -4,6 +4,7 @@ import os
 import pathlib
 import requests
 
+from config import PR_BLACKLIST, PR_FORCE
 from common import (
     upsert_repo, sqlite_db, make_common_schema, scalar,
     get_environ, analyse,
@@ -29,31 +30,41 @@ def normalize_module_name(name):
     ).replace("'", "").replace("`", "").strip("_")
 
 
+def match_title(title, pull):
+    if title in PR_FORCE:
+        return PR_FORCE[title], True
+
+    for re_module in pr_res:
+        match = re_module.search(title)
+        if match:
+            break
+    if match:
+        return normalize_module_name(match.groups()[-1]), match
+
+    for re_module in catchall_res:
+        match_catchall = re_module.search(title)
+        if match_catchall:
+            break
+    if match_catchall:
+        print(
+            'catchall', pull["html_url"], title,
+            match_catchall.groups()[-1],
+        )
+    return pull["number"], match
+
+
+
 def analyse_pr(version, pull):
     """Analyse a pull request and return a dict of module name and its data."""
     result = {}
+    if pull["html_url"] in PR_BLACKLIST:
+        return result
     title = pull["title"]
     if version == "tooling":
         module = pull["number"]
         match = None
     else:
-        for re_module in pr_res:
-            match = re_module.search(title)
-            if match:
-                break
-        if match:
-            module = normalize_module_name(match.groups()[-1])
-        else:
-            for re_module in catchall_res:
-                match_catchall = re_module.search(title)
-                if match_catchall:
-                    break
-            if match_catchall:
-                print(
-                    'catchall', pull["html_url"], title,
-                    match_catchall.groups()[-1],
-                )
-            module = pull["number"]
+        module, match = match_title(title, pull)
     result[module] = {
         "title": title,
         "author": pull["user"]["login"],

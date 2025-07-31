@@ -1,3 +1,12 @@
 VERSIONS = '12.0,13.0,14.0,15.0,16.0,17.0,18.0'
 DB_PATH = '/media/root1/code/trobz/services/odoo-module-tracker-api/var/'
 MANIFESTOO_PATH = ''
+PR_BLACKLIST = [
+    "https://github.com/OCA/web/pull/1354",
+    "https://github.com/OCA/reporting-engine/pull/405",
+    "https://github.com/OCA/product-attribute/pull/577",
+    "https://github.com/OCA/contract/pull/900",
+]
+PR_FORCE = {
+    "[14.0][MIG] attribute set completeness xbo": "attribute_set_completeness",
+}
