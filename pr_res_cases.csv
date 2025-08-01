@@ -31,3 +31,9 @@ https://github.com/OCA/account-closing/pull/318,[16.0][ADD] account_cutoff_accru
 https://github.com/OCA/contract/pull/875,[ADD] added migrated contract_sale_generation module,contract_sale_generation
 https://github.com/OCA/sale-workflow/pull/2155,[MIG][12.0] Backport of sale_order_line_menu to 12.0,sale_order_line_menu
 https://github.com/OCA/server-tools/pull/2142,[12.0][MIG][IMP] base_import_security_group,base_import_security_group
+https://github.com/OCA/sale-workflow/pull/1515,[14.0][ADD] [NEW] sale_crm_set_won,sale_crm_set_won
+https://github.com/OCA/contract/pull/675,[14.0][MIG] agreement_legal_sale_fieldservice (Version 12.0 to 14.0),agreement_legal_sale_fieldservice 
+https://github.com/OCA/field-service/pull/1316,[MIG][IMP] fieldservice_vehicle_stock: Migration to 15.0 + FSM vehicle stock transfer improvements,fieldservice_vehicle_stock
+https://github.com/OCA/sale-workflow/pull/1074,[MIG] Migrated product_form_sale_link to v13.,product_form_sale_link
+https://github.com/OCA/account-invoicing/pull/540,[MIG] Migration module account_group_invoice_line to v12,account_group_invoice_line
+https://github.com/OCA/brand/pull/122,[14.0][MIG] - migration pricelist brand to 14.0,pricelist brand

@@ -3,6 +3,9 @@ import re
 
 pr_res = [
     re.compile(
+        r"[Mm]igrat(ed|ion)\s+(module\s+)?([^:.,*\(]+)\s+to\s"
+    ),
+    re.compile(
         r"\[([0-9.]*)*\]\s*\[(ADD|MIG|mig)\]\s*[-:]\s*([a-z0-9_]+)"
     ),
     re.compile(
@@ -15,43 +18,43 @@ pr_res = [
         r"\[(ADD|MIG|mig)\]\s*[Aa]dded (a\s+|migrated\s+)*([a-z0-9_]+) [Mm]odule"
     ),
     re.compile(
-        r"\[*(ADD|MIG|mig)\]*\s*:*\smigrated\s([^:.,*]+)\s+[Mm]odule"
+        r"\[*(ADD|MIG|mig)\]*\s*:*\smigrated\s([^:.,*\(]+)\s+[Mm]odule"
     ),
     re.compile(
-        r"\[*ADD\]*\s*(([Aa]dd\s+)*[Mm]odule\s+)+([^:.,*]+)"
+        r"\[*ADD\]*\s*(([Aa]dd\s+)*[Mm]odule\s+)+([^:.,*\(]+)"
     ),
     re.compile(
-        r"\[ADD\]\s*:\s+([Aa]dd\s+)+([^:.,*]+)"
+        r"\[ADD\]\s*:\s+([Aa]dd\s+)+([^:.,*\(]+)"
     ),
     re.compile(
-        r"\[(ADD|MIG|mig)\]\s*([Aa]dd\s+)*([^:.,*]+)\s+[Mm]odule"
+        r"\[(ADD|MIG|mig)\]\s*([Aa]dd\s+)*([^:.,*\(]+)\s+[Mm]odule"
     ),
     re.compile(
-        r"(ADD|MIG|mig)\s+([^:.,*]+)\s+[Mm]odule"
+        r"(ADD|MIG|mig)\s+([^:.,*\(]+)\s+[Mm]odule"
     ),
     re.compile(
-        r"\[*(ADD|MIG|mig)\]*\s*([Aa]dd\s+)+([^:.,*]+)"
+        r"\[*(ADD|MIG|mig)\]*\s*([Aa]dd\s+|\[IMP\]\s*)+([^:.,*\(]+)"
     ),
     re.compile(
-        r"\[*[0-9.]+\]*\s*\[*(ADD|MIG|mig)(\+MIG)*(\+REF)*\]*(\[IMP\])?\s+([^:.,*]+)"
+        r"\[*[0-9.]+\]*\s*\[*(ADD|MIG|mig)(\+MIG)*(\+REF)*\]*(\[IMP\])?\s+(\[NEW\]\s*)?([^:.,*\(]+)"
     ),
     re.compile(
         r"\[*[0-9.]+\]*\s*\[*(ADD|MIG|mig)\]*\s*([a-z0-9_]+)"
     ),
     re.compile(
-        r"\Backport of ([^:.,*]+) to "
+        r"\Backport of ([^:.,*\(]+) to "
     ),
     re.compile(
         r"\[(ADD|MIG|mig)\]\s*\[([0-9.]*)*\]\s*([a-z0-9_]+)"
     ),
     re.compile(
-        r"\[(ADD|MIG|mig)\]\s*\[*([0-9.]+)\]*\s*:*\s*([^:.,*]+)"
+        r"\[(ADD|MIG|mig)\]\s*\[*([0-9.]+)\]*\s*:*\s*([^:.,*\(]+)"
     ),
     re.compile(
-        r"\[(ADD|MIG|mig)\]\[([^:.,*\]]+)\]"
+        r"\[(ADD|MIG|mig)\]\[([^:.,*\(\]]+)\]"
     ),
     re.compile(
-        r"\[(ADD|MIG|mig)\]\s+([^:.,*]+)"
+        r"\[(ADD|MIG|mig)\]\s+([^:.,*\(]+)"
     ),
     re.compile(
         r"\[*([0-9.]*)*\]*\s*\[*(ADD|MIG|mig)\]*(\s*\[[^]]*\])*\s*"
