@@ -45,11 +45,17 @@ def make_schema(db):
         )
         """
     )
+    db.execute(
+        """
+        CREATE VIRTUAL TABLE IF NOT EXISTS fts_module USING fts5
+        (module_id, summary, description);
+        """
+    )
 
 
 def upsert_module(db, repo_id, module_name, module_data):
     """Get the module id from the database, or insert it if it doesn't exist."""
-    return scalar(
+    module_id = scalar(
         db,
         """
         INSERT INTO module (repo_id, name, title, author, depends, maintainers, development_status, summary, last_version)
@@ -77,6 +83,17 @@ def upsert_module(db, repo_id, module_name, module_data):
         module_data["summary"],
         module_data["last_version"],
     )
+    scalar(
+        db,
+        """
+        INSERT INTO fts_module (module_id, summary, description)
+        VALUES (?, ?, ?)
+        """,
+        module_id,
+        module_data["summary"],
+        module_data["description"],
+    )
+    return module_id
 
 
 def upsert_commit(
