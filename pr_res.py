@@ -9,25 +9,34 @@ pr_res = [
         r"\[([0-9.]*)*\]\s*\[(ADD|MIG|mig)\]\s*[-:]\s*([a-z0-9_]+)"
     ),
     re.compile(
-        r"\[([0-9.]*)*\]\s*\[(ADD|MIG|mig)\]\s*([a-z0-9_]+) [Mm]odule"
+        r"\[*[0-9.]+\]*\s*\[ADD\]\s*([Aa]dd\s+)+([^:.,*\(]+)\s[Mm]odule"
     ),
     re.compile(
-        r"\[*[0-9.]+\]*\s*\[*(ADD|MIG|mig)\]*\s*Migrate\s+([a-z0-9_]+)"
+        r"\[*[0-9.]+\]*\s*\[ADD\]\s*\s:*\s*([Aa]dd\s+)+([Mm]odule\s+)*([^:.,*\(]+)"
+    ),
+    re.compile(
+        r"\[([0-9.]*)*\]\s*\[(ADD|MIG|mig)\]\s*([a-z0-9_]+) [Mm]odule"
     ),
     re.compile(
         r"\[(ADD|MIG|mig)\]\s*[Aa]dded (a\s+|migrated\s+)*([a-z0-9_]+) [Mm]odule"
     ),
     re.compile(
+        r"\[(ADD|MIG|mig)\]\s*([Aa]dd\s+)+([^:.,*\(]+)\s+[Mm]odule"
+    ),
+    re.compile(
+        r"\[*ADD\]*\s*\[*[0-9.]*\]*\s+([Aa]dd\s+)([Mm]odule\s+)*([^:.,*\(]+)"
+    ),
+    re.compile(
+        r"\[*[0-9.]+\]*\s*\[ADD\]\s*([Mm]odule\s+)+([^:.,*\(]+)"
+    ),
+    re.compile(
+        r"\[*[0-9.]+\]*\s*\[*(ADD|MIG|mig)\]*\s*Migrate\s+([a-z0-9_]+)"
+    ),
+    re.compile(
         r"\[*(ADD|MIG|mig)\]*\s*:*\smigrated\s([^:.,*\(]+)\s+[Mm]odule"
     ),
     re.compile(
-        r"\[*ADD\]*\s*(([Aa]dd\s+)*[Mm]odule\s+)+([^:.,*\(]+)"
-    ),
-    re.compile(
         r"\[ADD\]\s*:\s+([Aa]dd\s+)+([^:.,*\(]+)"
-    ),
-    re.compile(
-        r"\[(ADD|MIG|mig)\]\s*([Aa]dd\s+)*([^:.,*\(]+)\s+[Mm]odule"
     ),
     re.compile(
         r"(ADD|MIG|mig)\s+([^:.,*\(]+)\s+[Mm]odule"

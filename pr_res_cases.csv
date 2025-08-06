@@ -21,7 +21,6 @@ https://github.com/OCA/event/pull/399,[MIG] 16.0 : event_registration_cancel_rea
 https://github.com/OCA/sale-workflow/pull/1701,[MIG]: migrated sale_fixed_discount module,sale_fixed_discount
 https://github.com/OCA/l10n-brazil/pull/3834,[16.0][MIG][l10n_br_sped_ecf],l10n_br_sped_ecf
 https://github.com/OCA/pos/pull/1252,[17.0][ADD]: Improve pos_order_to_sale_order,
-https://github.com/OCA/account-analytic/pull/596,[15.0][ADD]account_analytic_ap_ar and recompute_payment_terms_lines_hook,account_analytic_ap_ar
 https://github.com/OCA/server-tools/pull/2359,"[WIP][12.0][ADD] Add base_external modules, use Odoo to administer data in external API",base_external
 https://github.com/OCA/event/pull/327,[15.0] [ADD] Add module website_event_sale_constraints_single_attendee,website_event_sale_constraints_single_attendee
 https://github.com/OCA/server-tools/pull/2403,[15.0][MIG] module_change_auto_install : Migration to 15.0,module_change_auto_install 
@@ -37,3 +36,5 @@ https://github.com/OCA/field-service/pull/1316,[MIG][IMP] fieldservice_vehicle_s
 https://github.com/OCA/sale-workflow/pull/1074,[MIG] Migrated product_form_sale_link to v13.,product_form_sale_link
 https://github.com/OCA/account-invoicing/pull/540,[MIG] Migration module account_group_invoice_line to v12,account_group_invoice_line
 https://github.com/OCA/brand/pull/122,[14.0][MIG] - migration pricelist brand to 14.0,pricelist brand
+https://github.com/OCA/operating-unit/pull/281,"[13.0][ADD] add module stock landed cost operating unit, stock landed cost …",stock landed cost operating unit
+https://github.com/OCA/account-fiscal-rule/pull/456,[ADD][16.0] add account_ecotax_report,account_ecotax_report
