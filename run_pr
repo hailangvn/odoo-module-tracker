@@ -1,13 +1,13 @@
 #!/usr/bin/python3
 
+import csv
 import os
 import pathlib
 import requests
 
-from config import PR_BLACKLIST, PR_FORCE
 from common import (
     upsert_repo, sqlite_db, make_common_schema, scalar,
-    get_environ, analyse,
+    get_environ, analyse, download,
 )
 from pr_res import pr_res, catchall_res
 
@@ -22,6 +22,8 @@ TOOLING_BASE = {
     "oca/odoo-module-migrator": "master",
     "oca/repo-maintainer-conf": "master",
 }
+PR_BLACKLIST = []
+PR_FORCE = {}
 
 
 def normalize_module_name(name):
@@ -212,6 +214,22 @@ def main():
     config, version, restrict, clean_db = get_environ(CONFIG_FILE)
     OUTPUT_DIRECTORY.mkdir(exist_ok=True)
     CLONE_DIRECTORY.mkdir(exist_ok=True)
+    file_name = CLONE_DIRECTORY / "pr_blacklist.csv"
+    download(file_name, "https://docs.google.com/spreadsheets/d/e/2PACX-1vQbM9cCWrECaWQUSSsvYHI4SPF8AqQt-L-dXCQnXyKHV279OLMN-6SgPgEVk5dgUk_czf9RYbzVC0ep/pub?gid=0&single=true&output=csv")
+    with open(file_name, "r") as file:
+        data = csv.reader(file)
+        for i, row in enumerate(data):
+            if i == 0:
+                continue
+            PR_BLACKLIST.append(row[0])
+    file_name = CLONE_DIRECTORY / "pr_force.csv"
+    download(file_name, "https://docs.google.com/spreadsheets/d/e/2PACX-1vQbM9cCWrECaWQUSSsvYHI4SPF8AqQt-L-dXCQnXyKHV279OLMN-6SgPgEVk5dgUk_czf9RYbzVC0ep/pub?gid=530648388&single=true&output=csv")
+    with open(file_name, "r") as file:
+        data = csv.reader(file)
+        for i, row in enumerate(data):
+            if i == 0:
+                continue
+            PR_FORCE[row[1]] = row[2]
 
     with sqlite_db(
         OUTPUT_DIRECTORY / f"prs_{version}.db", make_schema,
