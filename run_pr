@@ -21,6 +21,7 @@ TOOLING_BASE = {
     "oca/oca-port": "main",
     "oca/odoo-module-migrator": "master",
     "oca/repo-maintainer-conf": "master",
+    "oca/maintainer-quality-tools": "master",
 }
 PR_BLACKLIST = []
 PR_FORCE = {}
