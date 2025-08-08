@@ -21,6 +21,8 @@ def analyse_dep_tree(path):
         return {}
     paths = [ODOO_PATH, ENT_PATH]
     for org in CLONE_DIRECTORY.iterdir():
+        if not org.is_dir():
+            continue
         for repo in org.iterdir():
             if any([
                 module for module in repo.iterdir()
