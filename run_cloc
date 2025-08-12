@@ -1,6 +1,8 @@
 #!/usr/bin/python3
 
+import astroid
 import cloc
+import os
 import pathlib
 
 from common import (
@@ -37,6 +39,62 @@ def analyse_module(path):
         "total": sum(c.total.values()),
         "code": sum(c.code.values()),
     }
+    result['models'] = {}
+    for file in path.iterdir():
+        if file.name in cloc.MANIFEST_NAMES or (
+            file.name in ['__init__.py', 'tests']
+        ):
+            continue
+        if file.is_dir():
+            for subfile in file.iterdir():
+                ext = os.path.splitext(subfile.name)[1].lower()
+                if ext == '.py':
+                    result['models'].update(analyse_model(subfile))
+    return result
+
+
+def analyse_model(path):
+    result = {}
+    with open(path, 'r') as f:
+        has_bom = ord(f.read(1) or 'a') == 65279
+    with open(path, 'r') as f:
+        if has_bom:
+            f.read(1)
+        try:
+            tree = astroid.parse(f.read())
+        except astroid.exceptions.AstroidSyntaxError:
+            print(f"Syntax error in {path}")
+            return result
+        for body in tree.body:
+            if not isinstance(body, astroid.ClassDef):
+                continue
+            name = None
+            inherit = None
+            for node in body.body:
+                if not isinstance(node, astroid.Assign):
+                    continue
+                try:
+                    node_name = node.targets[0].name
+                except AttributeError:
+                    node_name = node.targets[0].attrname
+                if node_name == '_inherit':
+                    if isinstance(node.value, astroid.Const):
+                        inherit = node.value.value
+                    else:
+                        inherit = [
+                            est.value if isinstance(est, astroid.Const)
+                            else name if isinstance(est, astroid.Name)
+                            else est
+                            for est in node.value.elts
+                        ]
+                        if len(inherit) == 1:
+                            inherit = inherit[0]
+                elif node_name == '_name':
+                    name = node.value.value
+            if name:
+                result[name] = inherit
+            else:
+                result[inherit] = inherit
     return result
 
 
@@ -68,6 +126,29 @@ def make_schema(db):
             code INTEGER,
             FOREIGN KEY(module_id) REFERENCES cloc_module(id)
             UNIQUE(module_id, name)
+        )
+        """
+    )
+    db.execute(
+        """
+        CREATE TABLE IF NOT EXISTS model (
+            id INTEGER PRIMARY KEY,
+            name TEXT,
+            UNIQUE(name)
+        )
+        """
+    )
+    db.execute(
+        """
+        CREATE TABLE IF NOT EXISTS module_model (
+            id INTEGER PRIMARY KEY,
+            module_id INTEGER,
+            model_id INTEGER,
+            inherit_id INTEGER,
+            FOREIGN KEY(module_id) REFERENCES cloc_module(id),
+            FOREIGN KEY(model_id) REFERENCES model(id),
+            FOREIGN KEY(inherit_id) REFERENCES model(id),
+            UNIQUE(module_id, model_id, inherit_id)
         )
         """
     )
@@ -108,7 +189,48 @@ def upsert_module(db, repo_id, module_name, module_data):
             total,
             code,
         )
+    for model_name, model_inherits in module_data['models'].items():
+        model_id = upsert_model(db, model_name)
+        if isinstance(model_inherits, list):
+            ids = [upsert_model(db, inherit) for inherit in model_inherits]
+        elif model_inherits:
+            ids = [upsert_model(db, model_inherits)]
+        else:
+            ids = [None]
+        for inherit_id in ids:
+            scalar(
+                db,
+                """
+                INSERT INTO module_model (module_id, model_id, inherit_id)
+                VALUES (?, ?, ?)
+                ON CONFLICT(module_id, model_id, inherit_id)
+                DO UPDATE SET
+                    module_id = EXCLUDED.module_id,
+                    model_id = EXCLUDED.model_id,
+                    inherit_id = EXCLUDED.inherit_id
+                RETURNING id
+                """,
+                module_id,
+                model_id,
+                inherit_id,
+            )
     return module_id
+
+
+def upsert_model(db, model_name):
+    model_id = scalar(
+        db,
+        """
+        INSERT INTO model (name)
+        VALUES (?)
+        ON CONFLICT(name)
+        DO UPDATE SET
+            name = EXCLUDED.name
+        RETURNING id
+        """,
+        model_name,
+    )
+    return model_id
 
 
 def process_repo(db, org, repo, version, path, result):
