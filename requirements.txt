@@ -1,3 +1,4 @@
+pyyaml
 pysqlite3-binary
 requests
 manifestoo

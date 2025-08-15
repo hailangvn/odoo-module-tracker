@@ -62,15 +62,19 @@ def analyse_model(path):
             f.read(1)
         try:
             tree = astroid.parse(f.read())
-        except astroid.exceptions.AstroidSyntaxError:
-            print(f"Syntax error in {path}")
+        except astroid.exceptions.AstroidSyntaxError as e:
+            print(f"Syntax error in {path}", e)
             return result
         for body in tree.body:
             if not isinstance(body, astroid.ClassDef):
                 continue
             name = None
             inherit = None
+            methods = []
             for node in body.body:
+                if isinstance(node, astroid.FunctionDef):
+                    methods.append(node.name)
+                    continue
                 if not isinstance(node, astroid.Assign):
                     continue
                 try:
@@ -80,6 +84,11 @@ def analyse_model(path):
                 if node_name == '_inherit':
                     if isinstance(node.value, astroid.Const):
                         inherit = node.value.value
+                    elif (
+                        isinstance(node.value, astroid.Name)
+                        and node.value.name == '_name'
+                    ):
+                        inherit = name
                     else:
                         inherit = [
                             est.value if isinstance(est, astroid.Const)
@@ -91,10 +100,12 @@ def analyse_model(path):
                             inherit = inherit[0]
                 elif node_name == '_name':
                     name = node.value.value
-            if name:
-                result[name] = inherit
-            else:
-                result[inherit] = inherit
+            if not name:
+                name = inherit
+            result[name] = {
+                'inherit': inherit,
+                'methods': methods,
+            }
     return result
 
 
@@ -152,6 +163,29 @@ def make_schema(db):
         )
         """
     )
+    db.execute(
+        """
+        CREATE TABLE IF NOT EXISTS method (
+            id INTEGER PRIMARY KEY,
+            name TEXT,
+            UNIQUE(name)
+        )
+        """
+    )
+    db.execute(
+        """
+        CREATE TABLE IF NOT EXISTS module_method (
+            id INTEGER PRIMARY KEY,
+            module_id INTEGER,
+            model_id INTEGER,
+            method_id INTEGER,
+            FOREIGN KEY(module_id) REFERENCES cloc_module(id),
+            FOREIGN KEY(model_id) REFERENCES model(id),
+            FOREIGN KEY(method_id) REFERENCES method(id),
+            UNIQUE(module_id, model_id, method_id)
+        )
+        """
+    )
 
 
 def upsert_module(db, repo_id, module_name, module_data):
@@ -189,8 +223,12 @@ def upsert_module(db, repo_id, module_name, module_data):
             total,
             code,
         )
-    for model_name, model_inherits in module_data['models'].items():
+    for model_name, model_data in module_data['models'].items():
+        if not model_name:
+            continue
         model_id = upsert_model(db, model_name)
+        model_inherits = model_data['inherit']
+        model_methods = model_data['methods']
         if isinstance(model_inherits, list):
             ids = [upsert_model(db, inherit) for inherit in model_inherits]
         elif model_inherits:
@@ -214,6 +252,25 @@ def upsert_module(db, repo_id, module_name, module_data):
                 model_id,
                 inherit_id,
             )
+        for method in model_methods:
+            method_id = upsert_method(db, method)
+            scalar(
+                db,
+                """
+                INSERT INTO module_method (module_id, model_id, method_id)
+                VALUES (?, ?, ?)
+                ON CONFLICT(module_id, model_id, method_id)
+                DO UPDATE SET
+                    module_id = EXCLUDED.module_id,
+                    model_id = EXCLUDED.model_id,
+                    method_id = EXCLUDED.method_id
+                RETURNING id
+                """,
+                module_id,
+                model_id,
+                method_id,
+            )
+        continue
     return module_id
 
 
@@ -231,6 +288,22 @@ def upsert_model(db, model_name):
         model_name,
     )
     return model_id
+
+
+def upsert_method(db, method_name):
+    method_id = scalar(
+        db,
+        """
+        INSERT INTO method (name)
+        VALUES (?)
+        ON CONFLICT(name)
+        DO UPDATE SET
+            name = EXCLUDED.name
+        RETURNING id
+        """,
+        method_name,
+    )
+    return method_id
 
 
 def process_repo(db, org, repo, version, path, result):
@@ -254,6 +327,15 @@ def main():
         result = analyse(
             db, CLONE_DIRECTORY, config, version, restrict, process_repo
         )
+        result["odoo"] = {}
+        odoo_path = pathlib.Path(
+            f'~/code/odoo/odoo/{version}/addons'
+        ).expanduser()
+        process_repo(db, "odoo", "odoo", version, odoo_path, result)
+        enterprise_path = pathlib.Path(
+            f'~/code/odoo/enterprise/{version}'
+        ).expanduser()
+        process_repo(db, "odoo", "enterprise", version, enterprise_path, result)
 
 
 if __name__ == "__main__":
