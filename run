@@ -224,6 +224,10 @@ def main():
         )
         result["odoo"] = {}
         odoo_path = pathlib.Path(
+            f'~/code/odoo/odoo/{version}/odoo/addons'
+        ).expanduser()
+        process_repo(db, "odoo", "odoo", version, odoo_path, result)
+        odoo_path = pathlib.Path(
             f'~/code/odoo/odoo/{version}/addons'
         ).expanduser()
         process_repo(db, "odoo", "odoo", version, odoo_path, result)

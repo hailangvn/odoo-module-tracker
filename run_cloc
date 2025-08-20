@@ -45,11 +45,25 @@ def analyse_module(path):
             file.name in ['__init__.py', 'tests']
         ):
             continue
-        if file.is_dir():
-            for subfile in file.iterdir():
-                ext = os.path.splitext(subfile.name)[1].lower()
-                if ext == '.py':
-                    result['models'].update(analyse_model(subfile))
+        if not file.is_dir():
+            continue
+        for subfile in file.iterdir():
+            ext = os.path.splitext(subfile.name)[1].lower()
+            if ext != '.py':
+                continue
+            try:
+                models = analyse_model(subfile)
+            except Exception as e:
+                print(f"Error analysing {subfile}", e)
+                raise e
+            for model, data in models.items():
+                if not model in result['models']:
+                    result['models'][model] = data
+                    continue
+                existing_data = result['models'][model]
+                if model != data['inherit']:
+                    existing_data['inherit'] = data['inherit']
+                existing_data['methods'].extend(data['methods'])
     return result
 
 
@@ -65,47 +79,50 @@ def analyse_model(path):
         except astroid.exceptions.AstroidSyntaxError as e:
             print(f"Syntax error in {path}", e)
             return result
-        for body in tree.body:
-            if not isinstance(body, astroid.ClassDef):
+    for body in tree.body:
+        if not isinstance(body, astroid.ClassDef):
+            continue
+        name = None
+        inherit = None
+        methods = []
+        for node in body.body:
+            if isinstance(node, astroid.FunctionDef):
+                methods.append(node.name)
                 continue
-            name = None
-            inherit = None
-            methods = []
-            for node in body.body:
-                if isinstance(node, astroid.FunctionDef):
-                    methods.append(node.name)
-                    continue
-                if not isinstance(node, astroid.Assign):
-                    continue
+            if not isinstance(node, astroid.Assign):
+                continue
+            try:
+                node_name = node.targets[0].name
+            except AttributeError:
                 try:
-                    node_name = node.targets[0].name
-                except AttributeError:
                     node_name = node.targets[0].attrname
-                if node_name == '_inherit':
-                    if isinstance(node.value, astroid.Const):
-                        inherit = node.value.value
-                    elif (
-                        isinstance(node.value, astroid.Name)
-                        and node.value.name == '_name'
-                    ):
-                        inherit = name
-                    else:
-                        inherit = [
-                            est.value if isinstance(est, astroid.Const)
-                            else name if isinstance(est, astroid.Name)
-                            else est
-                            for est in node.value.elts
-                        ]
-                        if len(inherit) == 1:
-                            inherit = inherit[0]
-                elif node_name == '_name':
-                    name = node.value.value
-            if not name:
-                name = inherit
-            result[name] = {
-                'inherit': inherit,
-                'methods': methods,
-            }
+                except AttributeError:
+                    continue
+            if node_name == '_inherit':
+                if isinstance(node.value, astroid.Const):
+                    inherit = node.value.value
+                elif (
+                    isinstance(node.value, astroid.Name)
+                    and node.value.name == '_name'
+                ):
+                    inherit = name
+                else:
+                    inherit = [
+                        elt.value if isinstance(elt, astroid.Const)
+                        else name if isinstance(elt, astroid.Name)
+                        else elt
+                        for elt in node.value.elts
+                    ]
+                    if len(inherit) == 1:
+                        inherit = inherit[0]
+            elif node_name == '_name':
+                name = node.value.inferred()[0].value
+        if not name:
+            name = inherit
+        result[name] = {
+            'inherit': inherit,
+            'methods': methods,
+        }
     return result
 
 
@@ -155,11 +172,21 @@ def make_schema(db):
             id INTEGER PRIMARY KEY,
             module_id INTEGER,
             model_id INTEGER,
-            inherit_id INTEGER,
             FOREIGN KEY(module_id) REFERENCES cloc_module(id),
             FOREIGN KEY(model_id) REFERENCES model(id),
+            UNIQUE(module_id, model_id)
+        )
+        """
+    )
+    db.execute(
+        """
+        CREATE TABLE IF NOT EXISTS inherit (
+            id INTEGER PRIMARY KEY,
+            module_model_id INTEGER,
+            inherit_id INTEGER,
+            FOREIGN KEY(module_model_id) REFERENCES module_model(id),
             FOREIGN KEY(inherit_id) REFERENCES model(id),
-            UNIQUE(module_id, model_id, inherit_id)
+            UNIQUE(module_model_id, inherit_id)
         )
         """
     )
@@ -176,13 +203,11 @@ def make_schema(db):
         """
         CREATE TABLE IF NOT EXISTS module_method (
             id INTEGER PRIMARY KEY,
-            module_id INTEGER,
-            model_id INTEGER,
+            module_model_id INTEGER,
             method_id INTEGER,
-            FOREIGN KEY(module_id) REFERENCES cloc_module(id),
-            FOREIGN KEY(model_id) REFERENCES model(id),
+            FOREIGN KEY(module_model_id) REFERENCES module_model(id),
             FOREIGN KEY(method_id) REFERENCES method(id),
-            UNIQUE(module_id, model_id, method_id)
+            UNIQUE(module_model_id, method_id)
         )
         """
     )
@@ -235,21 +260,22 @@ def upsert_module(db, repo_id, module_name, module_data):
             ids = [upsert_model(db, model_inherits)]
         else:
             ids = [None]
+        module_model_id = upsert_module_model(db, module_id, model_id)
         for inherit_id in ids:
+            if not inherit_id:
+                continue
             scalar(
                 db,
                 """
-                INSERT INTO module_model (module_id, model_id, inherit_id)
-                VALUES (?, ?, ?)
-                ON CONFLICT(module_id, model_id, inherit_id)
+                INSERT INTO inherit (module_model_id, inherit_id)
+                VALUES (?, ?)
+                ON CONFLICT(module_model_id, inherit_id)
                 DO UPDATE SET
-                    module_id = EXCLUDED.module_id,
-                    model_id = EXCLUDED.model_id,
+                    module_model_id = EXCLUDED.module_model_id,
                     inherit_id = EXCLUDED.inherit_id
                 RETURNING id
                 """,
-                module_id,
-                model_id,
+                module_model_id,
                 inherit_id,
             )
         for method in model_methods:
@@ -257,17 +283,15 @@ def upsert_module(db, repo_id, module_name, module_data):
             scalar(
                 db,
                 """
-                INSERT INTO module_method (module_id, model_id, method_id)
-                VALUES (?, ?, ?)
-                ON CONFLICT(module_id, model_id, method_id)
+                INSERT INTO module_method (module_model_id, method_id)
+                VALUES (?, ?)
+                ON CONFLICT(module_model_id, method_id)
                 DO UPDATE SET
-                    module_id = EXCLUDED.module_id,
-                    model_id = EXCLUDED.model_id,
+                    module_model_id = EXCLUDED.module_model_id,
                     method_id = EXCLUDED.method_id
                 RETURNING id
                 """,
-                module_id,
-                model_id,
+                module_model_id,
                 method_id,
             )
         continue
@@ -286,6 +310,24 @@ def upsert_model(db, model_name):
         RETURNING id
         """,
         model_name,
+    )
+    return model_id
+
+
+def upsert_module_model(db, module_id, model_id):
+    model_id = scalar(
+        db,
+        """
+        INSERT INTO module_model (module_id, model_id)
+        VALUES (?, ?)
+        ON CONFLICT(module_id, model_id)
+        DO UPDATE SET
+            module_id = EXCLUDED.module_id,
+            model_id = EXCLUDED.model_id
+        RETURNING id
+        """,
+        module_id,
+        model_id,
     )
     return model_id
 
@@ -328,6 +370,10 @@ def main():
             db, CLONE_DIRECTORY, config, version, restrict, process_repo
         )
         result["odoo"] = {}
+        odoo_path = pathlib.Path(
+            f'~/code/odoo/odoo/{version}/odoo/addons'
+        ).expanduser()
+        process_repo(db, "odoo", "odoo", version, odoo_path, result)
         odoo_path = pathlib.Path(
             f'~/code/odoo/odoo/{version}/addons'
         ).expanduser()
