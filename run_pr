@@ -56,7 +56,6 @@ def match_title(title, pull):
     return pull["number"], match
 
 
-
 def analyse_pr(version, pull):
     """Analyse a pull request and return a dict of module name and its data."""
     result = {}
@@ -68,6 +67,10 @@ def analyse_pr(version, pull):
         match = None
     else:
         module, match = match_title(title, pull)
+    is_merged = bool(pull["merged_at"])
+    for label in pull["labels"]:
+        if label["name"] == "merged 🎉":
+            is_merged = True
     result[module] = {
         "title": title,
         "author": pull["user"]["login"],
@@ -80,6 +83,7 @@ def analyse_pr(version, pull):
         "created_period": "-".join(pull["created_at"].split("-")[:2]),
         "merged_at": pull["merged_at"],
         "is_migration": not bool(pull["merged_at"]) and bool(match),
+        "is_merged": is_merged,
     }
     return result
 
@@ -148,6 +152,7 @@ def make_schema(db):
             created_period TEXT,
             merged_at DATETIME,
             is_migration BOOLEAN,
+            is_merged BOOLEAN,
             FOREIGN KEY(repo_id) REFERENCES repo(id),
             UNIQUE(repo_id, module)
         )
@@ -160,8 +165,9 @@ def upsert_module(db, repo_id, module_name, module_data):
         db,
         """
         INSERT INTO pr (repo_id, module, title, author, url, state, number,
-            body, draft, created_at, created_period, merged_at, is_migration)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            body, draft, created_at, created_period, merged_at,
+            is_migration, is_merged)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(repo_id, module)
         DO UPDATE SET
             title = EXCLUDED.title,
@@ -174,7 +180,8 @@ def upsert_module(db, repo_id, module_name, module_data):
             created_at = EXCLUDED.created_at,
             created_period = EXCLUDED.created_period,
             merged_at = EXCLUDED.merged_at,
-            is_migration = EXCLUDED.is_migration
+            is_migration = EXCLUDED.is_migration,
+            is_merged = EXCLUDED.is_merged
         RETURNING id
         """,
         repo_id,
@@ -190,6 +197,7 @@ def upsert_module(db, repo_id, module_name, module_data):
         module_data["created_period"],
         module_data["merged_at"],
         module_data["is_migration"],
+        module_data["is_merged"],
     )
 
 
