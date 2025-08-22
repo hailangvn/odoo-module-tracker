@@ -1,3 +1,19 @@
+AwesomeFoodCoops:
+- odoo-production
+avanzosc:
+- odoo-addons
+camptocamp:
+- odoo-cloud-platform
+coopiteasy:
+- addons
+grap:
+- grap-odoo-custom
+ingadhoc:
+- miscellaneous
+- odoo-argentina
+- odoo-argentina-ce
+Smile-SA:
+- odoo_addons
 akretion:
 - account-move-import
 - bank-statement-reconcile-simple
