@@ -1,0 +1,12 @@
+#!/usr/bin/python3
+
+from common import download
+
+
+def main():
+    file_name = "/opt/openerp/service-odoo-module-tracker-frontend-production/var/replace_enterprise.csv"
+    download(file_name, "https://docs.google.com/spreadsheets/d/e/2PACX-1vQbM9cCWrECaWQUSSsvYHI4SPF8AqQt-L-dXCQnXyKHV279OLMN-6SgPgEVk5dgUk_czf9RYbzVC0ep/pub?gid=1445296908&single=true&output=csv")
+
+
+if __name__ == "__main__":
+    main()
