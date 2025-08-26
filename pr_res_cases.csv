@@ -40,3 +40,5 @@ https://github.com/OCA/operating-unit/pull/281,"[13.0][ADD] add module stock lan
 https://github.com/OCA/account-fiscal-rule/pull/456,[ADD][16.0] add account_ecotax_report,account_ecotax_report
 https://github.com/OCA/hr-expense/pull/12,[13.0][MIG / IMP] hr_expense_advance_overdue_reminder,hr_expense_advance_overdue_reminder
 https://github.com/OCA/credit-control/pull/470,[18.0][ADD] account_credit_control_aggregate_level - Aggregate multiple levels in credit lines to make single communications,account_credit_control_aggregate_level 
+https://github.com/OCA/contract/pull/1245,[18.0][MIG] Migration of subscription_oca to 18.0,subscription_oca
+https://github.com/OCA/account-invoicing/pull/2067,[17.0][MIG] account_invoice_purchase_picking_selection to 17.0,account_invoice_purchase_picking_selection

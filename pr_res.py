@@ -3,7 +3,7 @@ import re
 
 pr_res = [
     re.compile(
-        r"[Mm]igrat(ed|ion)\s+(module\s+)?([^:.,*\(\-]+)\s+to\s"
+        r"[Mm]igrat(ed|ion)\s+(of\s)?(module\s+)?([^:.,*\(\-]+)\s+to\s"
     ),
     re.compile(
         r"\[([0-9.]*)*\]\s*\[(ADD|MIG|mig)\]\s*[-:]\s*([a-z0-9_]+)"
@@ -43,6 +43,9 @@ pr_res = [
     ),
     re.compile(
         r"\[*(ADD|MIG|mig)\]*\s*([Aa]dd\s+|\[IMP\]\s*)+([^:.,*\(\-]+)"
+    ),
+    re.compile(
+        r"\[*[0-9.]+\]*\s*\[*(ADD|MIG|mig)(\+\s*MIG)*(\+\s*REF)*(\s*/\s*IMP)*\]*(\[IMP\])?\s+(\[NEW\]\s*)?([^:.,*\(\-]+)\sto\s[0-9.]+"
     ),
     re.compile(
         r"\[*[0-9.]+\]*\s*\[*(ADD|MIG|mig)(\+\s*MIG)*(\+\s*REF)*(\s*/\s*IMP)*\]*(\[IMP\])?\s+(\[NEW\]\s*)?([^:.,*\(\-]+)"
