@@ -82,6 +82,9 @@ def analyse_model(path):
     for body in tree.body:
         if not isinstance(body, astroid.ClassDef):
             continue
+        model_based = [b for b in body.bases if 'Model' in str(b)]
+        if not model_based:
+            continue
         name = None
         inherit = None
         methods = []
@@ -122,6 +125,7 @@ def analyse_model(path):
         result[name] = {
             'inherit': inherit,
             'methods': methods,
+            'path': str(path),
         }
     return result
 
@@ -172,6 +176,7 @@ def make_schema(db):
             id INTEGER PRIMARY KEY,
             module_id INTEGER,
             model_id INTEGER,
+            path TEXT,
             FOREIGN KEY(module_id) REFERENCES cloc_module(id),
             FOREIGN KEY(model_id) REFERENCES model(id),
             UNIQUE(module_id, model_id)
@@ -205,6 +210,7 @@ def make_schema(db):
             id INTEGER PRIMARY KEY,
             module_model_id INTEGER,
             method_id INTEGER,
+            is_new BOOLEAN,
             FOREIGN KEY(module_model_id) REFERENCES module_model(id),
             FOREIGN KEY(method_id) REFERENCES method(id),
             UNIQUE(module_model_id, method_id)
@@ -260,7 +266,9 @@ def upsert_module(db, repo_id, module_name, module_data):
             ids = [upsert_model(db, model_inherits)]
         else:
             ids = [None]
-        module_model_id = upsert_module_model(db, module_id, model_id)
+        module_model_id = upsert_module_model(
+            db, module_id, model_id, model_data['path'],
+        )
         for inherit_id in ids:
             if not inherit_id:
                 continue
@@ -314,20 +322,20 @@ def upsert_model(db, model_name):
     return model_id
 
 
-def upsert_module_model(db, module_id, model_id):
+def upsert_module_model(db, module_id, model_id, path):
     model_id = scalar(
         db,
         """
-        INSERT INTO module_model (module_id, model_id)
-        VALUES (?, ?)
+        INSERT INTO module_model (module_id, model_id, path)
+        VALUES (?, ?, ?)
         ON CONFLICT(module_id, model_id)
         DO UPDATE SET
-            module_id = EXCLUDED.module_id,
-            model_id = EXCLUDED.model_id
+            path = EXCLUDED.path
         RETURNING id
         """,
         module_id,
         model_id,
+        path,
     )
     return model_id
 
