@@ -40,31 +40,34 @@ def analyse_module(path):
         "code": sum(c.code.values()),
     }
     result['models'] = {}
+    analyse_path(path, result)
+    return result
+
+
+def analyse_path(path, result):
     for file in path.iterdir():
         if file.name in cloc.MANIFEST_NAMES or (
             file.name in ['__init__.py', 'tests']
         ):
             continue
-        if not file.is_dir():
+        if file.is_dir():
+            analyse_path(file, result)
+        ext = os.path.splitext(file.name)[1].lower()
+        if ext != '.py':
             continue
-        for subfile in file.iterdir():
-            ext = os.path.splitext(subfile.name)[1].lower()
-            if ext != '.py':
+        try:
+            models = analyse_model(file)
+        except Exception as e:
+            print(f"Error analysing {file}", e)
+            raise e
+        for model, data in models.items():
+            if not model in result['models']:
+                result['models'][model] = data
                 continue
-            try:
-                models = analyse_model(subfile)
-            except Exception as e:
-                print(f"Error analysing {subfile}", e)
-                raise e
-            for model, data in models.items():
-                if not model in result['models']:
-                    result['models'][model] = data
-                    continue
-                existing_data = result['models'][model]
-                if model != data['inherit']:
-                    existing_data['inherit'] = data['inherit']
-                existing_data['methods'].extend(data['methods'])
-    return result
+            existing_data = result['models'][model]
+            if model != data['inherit']:
+                existing_data['inherit'] = data['inherit']
+            existing_data['methods'].extend(data['methods'])
 
 
 def analyse_model(path):
