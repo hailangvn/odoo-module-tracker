@@ -82,11 +82,14 @@ def analyse_model(path):
         except astroid.exceptions.AstroidSyntaxError as e:
             print(f"Syntax error in {path}", e)
             return result
+    names = {}
     for body in tree.body:
-        if not isinstance(body, astroid.ClassDef):
+        if isinstance(body, astroid.ImportFrom):
+            for from_name, to_name in body.names:
+                if to_name:
+                    names[to_name] = from_name
             continue
-        model_based = [b for b in body.bases if 'Model' in str(b)]
-        if not model_based:
+        if not isinstance(body, astroid.ClassDef):
             continue
         name = None
         inherit = None
@@ -123,14 +126,61 @@ def analyse_model(path):
                         inherit = inherit[0]
             elif node_name == '_name':
                 name = node.value.inferred()[0].value
-        if not name:
+        if not name and inherit:
             name = inherit
-        result[name] = {
-            'inherit': inherit,
-            'methods': methods,
-            'path': str(path),
-        }
+        routes = analyse_routes(path, body)
+        if routes and not name:
+            name = body.name
+            inherit = [
+                names.get(b.name, b.name)
+                if type(b) == astroid.Name
+                else b.attrname for b in body.bases
+            ]
+        if name:
+            result[name] = {
+                'inherit': inherit,
+                'methods': methods,
+                'routes': routes,
+                'path': str(path),
+            }
     return result
+
+
+def analyse_routes(path, cls):
+    routes = {}
+    for element in cls.body:
+        if not isinstance(element, astroid.FunctionDef):
+            continue
+        if not element.decorators:
+            continue
+        route_nodes = []
+        for n in element.decorators.nodes:
+            if not type(n) == astroid.Call:
+                continue
+            if type(n.func) == astroid.Attribute:
+                is_route = n.func.attrname == 'route'
+            else:
+                is_route = n.func.name == 'route'
+            if is_route:
+                route_nodes.append(n)
+        if not route_nodes:
+            continue
+        routes[element.name] = []
+        for node in route_nodes:
+            try:
+                if type(node.args[0]) == astroid.Const:
+                    routes[element.name].append(node.args[0].value)
+                    continue
+            except IndexError:
+                continue
+            if type(node.args[0]) in [astroid.Name, astroid.JoinedStr]:
+                routes[element.name].append(
+                    node.args[0].inferred()[0].value
+                )
+                continue
+            for elt in node.args[0].inferred()[0].elts:
+                routes[element.name].append(elt.inferred()[0].value)
+    return routes
 
 
 def make_schema(db):
@@ -220,6 +270,27 @@ def make_schema(db):
         )
         """
     )
+    db.execute(
+        """
+        CREATE TABLE IF NOT EXISTS path (
+            id INTEGER PRIMARY KEY,
+            path TEXT,
+            UNIQUE(path)
+        )
+        """
+    )
+    db.execute(
+        """
+        CREATE TABLE IF NOT EXISTS route (
+            id INTEGER PRIMARY KEY,
+            module_method_id INTEGER,
+            path_id INTEGER,
+            FOREIGN KEY(module_method_id) REFERENCES module_method(id),
+            FOREIGN KEY(path_id) REFERENCES path(id),
+            UNIQUE(module_method_id, path_id)
+        )
+        """
+    )
 
 
 def upsert_module(db, repo_id, module_name, module_data):
@@ -260,13 +331,16 @@ def upsert_module(db, repo_id, module_name, module_data):
     for model_name, model_data in module_data['models'].items():
         if not model_name:
             continue
-        model_id = upsert_model(db, model_name)
+        model_id = upsert_simple(db, 'model', 'name', model_name)
         model_inherits = model_data['inherit']
         model_methods = model_data['methods']
+        model_routes = model_data['routes']
         if isinstance(model_inherits, list):
-            ids = [upsert_model(db, inherit) for inherit in model_inherits]
+            ids = [upsert_simple(
+                db, 'model', 'name', inherit
+            ) for inherit in model_inherits]
         elif model_inherits:
-            ids = [upsert_model(db, model_inherits)]
+            ids = [upsert_simple(db, 'model', 'name', model_inherits)]
         else:
             ids = [None]
         module_model_id = upsert_module_model(
@@ -290,8 +364,8 @@ def upsert_module(db, repo_id, module_name, module_data):
                 inherit_id,
             )
         for method in model_methods:
-            method_id = upsert_method(db, method)
-            scalar(
+            method_id = upsert_simple(db, 'method', 'name', method)
+            module_method_id = scalar(
                 db,
                 """
                 INSERT INTO module_method (module_model_id, method_id)
@@ -305,24 +379,45 @@ def upsert_module(db, repo_id, module_name, module_data):
                 module_model_id,
                 method_id,
             )
-        continue
+            if not method in model_routes:
+                continue
+            paths = model_routes[method]
+            for path in model_routes[method] or [None]:
+                if path:
+                    path_id = upsert_simple(db, 'path', 'path', path)
+                else:
+                    path_id = None
+                scalar(
+                    db,
+                    """
+                    INSERT INTO route (module_method_id, path_id)
+                    VALUES (?, ?)
+                    ON CONFLICT(module_method_id, path_id)
+                    DO UPDATE SET
+                        module_method_id = EXCLUDED.module_method_id,
+                        path_id = EXCLUDED.path_id
+                    RETURNING id
+                    """,
+                    module_method_id,
+                    path_id,
+                )
     return module_id
 
 
-def upsert_model(db, model_name):
-    model_id = scalar(
+def upsert_simple(db, table, column, value):
+    record_id = scalar(
         db,
-        """
-        INSERT INTO model (name)
+        f"""
+        INSERT INTO {table} ({column})
         VALUES (?)
-        ON CONFLICT(name)
+        ON CONFLICT({column})
         DO UPDATE SET
-            name = EXCLUDED.name
+            {column} = EXCLUDED.{column}
         RETURNING id
         """,
-        model_name,
+        value,
     )
-    return model_id
+    return record_id
 
 
 def upsert_module_model(db, module_id, model_id, path):
@@ -341,22 +436,6 @@ def upsert_module_model(db, module_id, model_id, path):
         path,
     )
     return model_id
-
-
-def upsert_method(db, method_name):
-    method_id = scalar(
-        db,
-        """
-        INSERT INTO method (name)
-        VALUES (?)
-        ON CONFLICT(name)
-        DO UPDATE SET
-            name = EXCLUDED.name
-        RETURNING id
-        """,
-        method_name,
-    )
-    return method_id
 
 
 def process_repo(db, org, repo, version, path, result):
@@ -381,10 +460,12 @@ def main():
             db, CLONE_DIRECTORY, config, version, restrict, process_repo
         )
         result["odoo"] = {}
+        print('Processing odoo/odoo')
         odoo_path = pathlib.Path(
             f'~/code/odoo/odoo/{version}/odoo/addons'
         ).expanduser()
         process_repo(db, "odoo", "odoo", version, odoo_path, result)
+        print('Processing odoo/enterprise')
         odoo_path = pathlib.Path(
             f'~/code/odoo/odoo/{version}/addons'
         ).expanduser()
