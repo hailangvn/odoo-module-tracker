@@ -21,16 +21,16 @@ def run_read(cwd, *args, **kwargs):
 
 def get_repo(CLONE_DIRECTORY, org, repo, version):
     """Clone or update a repo to the given version."""
-    path = CLONE_DIRECTORY / org / repo
+    path = CLONE_DIRECTORY / org / repo / version
     if path.exists():
         print(f"Updating {org}/{repo}@{version}")
         run(path, "git", "checkout", version)
         run(path, "git", "pull")
     else:
         print(f"Cloning {org}/{repo}@{version}")
-        org_path = CLONE_DIRECTORY / org
+        org_path = CLONE_DIRECTORY / org / repo
         path.mkdir(exist_ok=True, parents=True)
-        run(org_path, "git", "clone", f"https://github.com/{org}/{repo}", "-b", version)
+        run(org_path, "git", "clone", f"https://github.com/{org}/{repo}", version, "-b", version)
     return path
 
 
