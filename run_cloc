@@ -219,6 +219,7 @@ def make_schema(db):
         CREATE TABLE IF NOT EXISTS model (
             id INTEGER PRIMARY KEY,
             name TEXT,
+            is_new BOOLEAN,
             UNIQUE(name)
         )
         """
