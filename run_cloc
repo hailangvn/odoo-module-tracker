@@ -59,7 +59,7 @@ def analyse_path(path, result):
             models = analyse_model(file)
         except Exception as e:
             print(f"Error analysing {file}", e)
-            raise e
+            continue
         for model, data in models.items():
             if not model in result['models']:
                 result['models'][model] = data
