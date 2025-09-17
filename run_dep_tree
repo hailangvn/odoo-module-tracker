@@ -24,11 +24,14 @@ def analyse_dep_tree(path):
         if not org.is_dir():
             continue
         for repo in org.iterdir():
+            version_dir = repo / version
+            if not version_dir.exists():
+                continue
             if any([
-                module for module in repo.iterdir()
+                module for module in version_dir.iterdir()
                 if (module / "__manifest__.py").exists()
             ]):
-                paths.append(repo)
+                paths.append(version_dir)
     addon_path = ",".join([str(p) for p in paths])
     dep_tree = run_read(
         path, f"{MANIFESTOO_PATH}manifestoo",
