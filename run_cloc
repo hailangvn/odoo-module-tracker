@@ -94,6 +94,7 @@ def analyse_model(path):
         name = None
         inherit = None
         methods = []
+        is_controller = False
         for node in body.body:
             if isinstance(node, astroid.FunctionDef):
                 methods.append(node.name)
@@ -130,6 +131,7 @@ def analyse_model(path):
             name = inherit
         routes = analyse_routes(path, body)
         if routes and not name:
+            is_controller = True
             name = body.name
             inherit = [
                 names.get(b.name, b.name)
@@ -142,6 +144,7 @@ def analyse_model(path):
                 'methods': methods,
                 'routes': routes,
                 'path': str(path),
+                'is_controller': is_controller,
             }
     return result
 
@@ -220,6 +223,7 @@ def make_schema(db):
             id INTEGER PRIMARY KEY,
             name TEXT,
             is_new BOOLEAN,
+            is_controller BOOLEAN,
             UNIQUE(name)
         )
         """
@@ -332,7 +336,7 @@ def upsert_module(db, repo_id, module_name, module_data):
     for model_name, model_data in module_data['models'].items():
         if not model_name:
             continue
-        model_id = upsert_simple(db, 'model', 'name', model_name)
+        model_id = upsert_model(db, model_name, model_data)
         model_inherits = model_data['inherit']
         model_methods = model_data['methods']
         model_routes = model_data['routes']
@@ -403,6 +407,23 @@ def upsert_module(db, repo_id, module_name, module_data):
                     path_id,
                 )
     return module_id
+
+
+def upsert_model(db, model_name, model_data):
+    record_id = scalar(
+        db,
+        f"""
+        INSERT INTO model (name, is_controller)
+        VALUES (?, ?)
+        ON CONFLICT(name)
+        DO UPDATE SET
+            is_controller = EXCLUDED.is_controller
+        RETURNING id
+        """,
+        model_name,
+        model_data['is_controller'],
+    )
+    return record_id
 
 
 def upsert_simple(db, table, column, value):
