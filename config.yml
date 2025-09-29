@@ -1,3 +1,22 @@
+ursais:
+- osi-addons
+Mint-System:
+- Odoo-Apps-HR
+CybroOdoo:
+- CybroAddons
+beescoop:
+- Obeesdoo
+coopiteasy:
+- addons
+- cie-custom
+- cie-pos
+- cie-partner-contact
+- cie-stock
+- cie-timesheet
+- cie-e-commerce
+- cie-resource
+- cie-purchase
+- cie-hr
 AwesomeFoodCoops:
 - odoo-production
 avanzosc:
