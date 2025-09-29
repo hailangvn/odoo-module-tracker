@@ -5,6 +5,7 @@ import os
 import pathlib
 import requests
 
+from collections import defaultdict
 from common import (
     upsert_repo, sqlite_db, make_common_schema, scalar,
     get_environ, analyse, download,
@@ -116,6 +117,8 @@ def analyse_repo(path, org, repo, version, analyse_pr):
             break
         for pull in data:
             module = analyse_pr(version, pull)
+            if not module:
+                continue
             found = False
             for key in module.keys():
                 if key in result:
@@ -126,8 +129,39 @@ def analyse_repo(path, org, repo, version, analyse_pr):
                 module = {
                     pull["number"]: module[key]
                 }
+            elif key != pull["number"]:
+                head_commit = pull["head"]["sha"]
+                r = requests.get(
+                    f"https://api.github.com/repos/{org}/{repo}/commits"
+                    f"/{head_commit}/check-runs",
+                    headers=headers,
+                )
+                if r.status_code != 200:
+                    print(f"Fail to fetch commit {head_commit}\n{r.text}")
+                    raise requests.RequestException()
+                check_runs = r.json()["check_runs"]
+                module[key]["tests_passed"] = _pass(check_runs)
             result.update(module)
     return result
+
+
+def _pass(check_runs):
+    check_runs_by_type = defaultdict(list)
+    for c in check_runs:
+        if c['name'] in (
+                'Travis CI - Pull Request', # c2c side
+                'pre-commit',
+                'test with Odoo',
+                'test with OCB') and \
+                c['status'] == 'completed':
+            check_runs_by_type[c['name']].append(
+                (c['completed_at'], c['conclusion'])
+            )
+    for k in check_runs_by_type.keys():
+        check_runs_by_type[k].sort(key=lambda c: c[0])
+        if check_runs_by_type[k][-1][1] != 'success':
+            return False
+    return True
 
 
 def make_schema(db):
@@ -153,6 +187,7 @@ def make_schema(db):
             merged_at DATETIME,
             is_migration BOOLEAN,
             is_merged BOOLEAN,
+            tests_passed BOOLEAN,
             FOREIGN KEY(repo_id) REFERENCES repo(id),
             UNIQUE(repo_id, module)
         )
@@ -166,8 +201,8 @@ def upsert_module(db, repo_id, module_name, module_data):
         """
         INSERT INTO pr (repo_id, module, title, author, url, state, number,
             body, draft, created_at, created_period, merged_at,
-            is_migration, is_merged)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            is_migration, is_merged, tests_passed)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(repo_id, module)
         DO UPDATE SET
             title = EXCLUDED.title,
@@ -181,7 +216,8 @@ def upsert_module(db, repo_id, module_name, module_data):
             created_period = EXCLUDED.created_period,
             merged_at = EXCLUDED.merged_at,
             is_migration = EXCLUDED.is_migration,
-            is_merged = EXCLUDED.is_merged
+            is_merged = EXCLUDED.is_merged,
+            tests_passed = EXCLUDED.tests_passed
         RETURNING id
         """,
         repo_id,
@@ -198,6 +234,7 @@ def upsert_module(db, repo_id, module_name, module_data):
         module_data["merged_at"],
         module_data["is_migration"],
         module_data["is_merged"],
+        module_data.get("tests_passed", True),
     )
 
 
