@@ -32,7 +32,7 @@ def get_repo(CLONE_DIRECTORY, org, repo, version):
         path.mkdir(exist_ok=True, parents=True)
         run(
             org_path, "git", "clone", f"https://github.com/{org}/{repo}",
-            version, "-b", version,
+            version, "-b", version, "--single-branch",
         )
     return path
 
