@@ -19,6 +19,17 @@ CONFIG_FILE = BASE_DIRECTORY / "config.yml"
 def analyse_dep_tree(path):
     if not path.is_dir() or not (path / "__manifest__.py").exists():
         return {}
+    row_id = scalar(
+        db,
+        """
+        SELECT id
+        FROM module
+        WHERE name = ? AND (old_depends IS NULL OR old_depends != depends)
+        """,
+        path.name,
+    )
+    if not row_id:
+        return {}
     paths = [ODOO_PATH, ENT_PATH]
     for org in CLONE_DIRECTORY.iterdir():
         if not org.is_dir():
@@ -52,7 +63,7 @@ def make_schema(db):
 
 
 def upsert_module(db, repo_id, module_name, module_data):
-    return scalar(
+    row_id = scalar(
         db,
         """
         INSERT INTO module (repo_id, name, dep_tree)
@@ -66,6 +77,16 @@ def upsert_module(db, repo_id, module_name, module_data):
         module_name,
         module_data["dep_tree"],
     )
+    scalar(
+        db,
+        """
+        UPDATE module
+        SET old_depends = depends
+        WHERE id = ?
+        """,
+        row_id,
+    )
+    return row_id
 
 
 def process_repo(db, org, repo, version, path, result):
@@ -93,9 +114,11 @@ def main():
     OUTPUT_DIRECTORY.mkdir(exist_ok=True)
     CLONE_DIRECTORY.mkdir(exist_ok=True)
 
+    global db
     with sqlite_db(
         OUTPUT_DIRECTORY / f"{version}.db", make_schema, clean=False
-    ) as db:
+    ) as db_1:
+        db = db_1
         result = analyse(
             db, CLONE_DIRECTORY, config, version, restrict, process_repo
         )

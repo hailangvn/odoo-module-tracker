@@ -114,6 +114,7 @@ def make_common_schema(db, with_module):
                 name TEXT,
                 title TEXT,
                 author TEXT,
+                old_depends TEXT,
                 depends TEXT,
                 maintainers TEXT,
                 development_status TEXT,
