@@ -57,6 +57,7 @@ def analyse_module(path):
     return {
         "name": data["name"],
         "author": data.get("author"),
+        "category": data.get("category"),
         "depends": data.get("depends", []),
         "maintainers": data.get("maintainers", []),
         "development_status": data.get("development_status"),
@@ -108,12 +109,22 @@ def make_common_schema(db, with_module):
     if with_module:
         db.execute(
             """
+            CREATE TABLE IF NOT EXISTS category (
+                id INTEGER PRIMARY KEY,
+                name TEXT,
+                UNIQUE(name)
+            )
+            """
+        )
+        db.execute(
+            """
             CREATE TABLE IF NOT EXISTS module (
                 id INTEGER PRIMARY KEY,
                 repo_id INTEGER,
                 name TEXT,
                 title TEXT,
                 author TEXT,
+                category_id INTEGER,
                 old_depends TEXT,
                 depends TEXT,
                 maintainers TEXT,
@@ -122,6 +133,7 @@ def make_common_schema(db, with_module):
                 last_version TEXT,
                 dep_tree TEXT,
                 FOREIGN KEY(repo_id) REFERENCES repo(id)
+                FOREIGN KEY(category_id) REFERENCES category(id)
                 UNIQUE(repo_id, name)
             )
             """

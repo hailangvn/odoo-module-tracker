@@ -55,15 +55,33 @@ def make_schema(db):
 
 def upsert_module(db, repo_id, module_name, module_data):
     """Get the module id from the database, or insert it if it doesn't exist."""
+    category = module_data["category"]
+    if category:
+        category_id = scalar(
+            db,
+            """
+            INSERT INTO category (name)
+            VALUES (?)
+            ON CONFLICT(name)
+            DO UPDATE SET
+                name = EXCLUDED.name
+            RETURNING id
+            """,
+            category,
+        )
+    else:
+        category_id = None
     module_id = scalar(
         db,
         """
-        INSERT INTO module (repo_id, name, title, author, depends, maintainers, development_status, summary, last_version)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO module (repo_id, name, title, author, category_id,
+            depends, maintainers, development_status, summary, last_version)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(repo_id, name)
         DO UPDATE SET
             title = EXCLUDED.title,
             author = EXCLUDED.author,
+            category_id = EXCLUDED.category_id,
             depends = EXCLUDED.depends,
             maintainers = EXCLUDED.maintainers,
             development_status = EXCLUDED.development_status,
@@ -77,6 +95,7 @@ def upsert_module(db, repo_id, module_name, module_data):
         ",".join(module_data["author"])
         if type(module_data["author"]) == list
         else module_data["author"],
+        category_id,
         ",".join(module_data["depends"]),
         ",".join(module_data["maintainers"]),
         module_data["development_status"],
