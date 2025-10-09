@@ -1,38 +1,15 @@
-ursais:
-- osi-addons
-Mint-System:
-- Odoo-Apps-HR
-CybroOdoo:
-- CybroAddons
-beescoop:
-- Obeesdoo
-coopiteasy:
-- addons
-- cie-custom
-- cie-pos
-- cie-partner-contact
-- cie-stock
-- cie-timesheet
-- cie-e-commerce
-- cie-resource
-- cie-purchase
-- cie-hr
 AwesomeFoodCoops:
 - odoo-production
-avanzosc:
-- odoo-addons
-camptocamp:
-- odoo-cloud-platform
-coopiteasy:
-- addons
-grap:
-- grap-odoo-custom
-ingadhoc:
-- miscellaneous
-- odoo-argentina
-- odoo-argentina-ce
+CybroOdoo:
+- CybroAddons
+Lokavaluto:
+- lokavaluto-addons
+Mint-System:
+- Odoo-Apps-HR
 Smile-SA:
 - odoo_addons
+acysos:
+- odoo-addons
 akretion:
 - account-move-import
 - bank-statement-reconcile-simple
@@ -48,8 +25,35 @@ akretion:
 - odoo-mooncard-connector
 - subcontractor
 - odoo-py3o-report-templates
+altinkaya-opensource:
+- odoo-addons
+avanzosc:
+- odoo-addons
+beescoop:
+- Obeesdoo
+camptocamp:
+- odoo-cloud-platform
+commown:
+- commown-odoo-addons
+coopiteasy:
+- addons
+- cie-custom
+- cie-e-commerce
+- cie-hr
+- cie-partner-contact
+- cie-pos
+- cie-purchase
+- cie-resource
+- cie-stock
+- cie-timesheet
 forgeflow:
 - stock-rma
+grap:
+- grap-odoo-custom
+ingadhoc:
+- miscellaneous
+- odoo-argentina
+- odoo-argentina-ce
 oca:
 - account-analytic
 - account-budgeting
@@ -63,13 +67,16 @@ oca:
 - account-payment
 - account-reconcile
 - agreement
+- ai
 - apps-store
 - automation
 - bank-payment
+- bank-payment-alternative
 - bank-statement-import
 - brand
 - business-requirement
 - calendar
+- cim
 - commission
 - community-data-files
 - connector
@@ -94,6 +101,7 @@ oca:
 - cooperative
 - credit-control
 - crm
+- crowdfunding
 - currency
 - data-protection
 - ddmrp
@@ -105,7 +113,9 @@ oca:
 - e-commerce
 - e-learning
 - edi
+- edi-ediversa
 - edi-framework
+- edi-voxel
 - event
 - field-service
 - fleet
@@ -128,6 +138,7 @@ oca:
 - manufacture
 - manufacture-reporting
 - margin-analysis
+- mass-mailing
 - mis-builder
 - mis-builder-contrib
 - multi-company
@@ -160,8 +171,10 @@ oca:
 - rma
 - role-policy
 - runbot-addons
+- sale-blanket
 - sale-channel
 - sale-financial
+- sale-prebook
 - sale-promotion
 - sale-reporting
 - sale-workflow
@@ -173,6 +186,7 @@ oca:
 - server-tools
 - server-ux
 - shift-planning
+- shopfloor-app
 - sign
 - social
 - spreadsheet
@@ -180,8 +194,12 @@ oca:
 - stock-logistics-barcode
 - stock-logistics-interfaces
 - stock-logistics-orderpoint
+- stock-logistics-putaway
+- stock-logistics-release-channel
 - stock-logistics-reporting
 - stock-logistics-request
+- stock-logistics-reservation
+- stock-logistics-shopfloor
 - stock-logistics-tracking
 - stock-logistics-transport
 - stock-logistics-warehouse
@@ -215,7 +233,22 @@ oca:
 - website-cms
 - website-themes
 - wms
+odoomates:
+- odooapps
 shopinvader:
 - pattern-import-export
 - odoo-shopinvader
 - odoo-shopinvader-payment
+solvosci:
+- slv-account
+- slv-e-commerce
+- slv-general
+- slv-manufacture
+- slv-product
+- slv-purchase
+- slv-sale
+- slv-stock
+sustainability-suite:
+- sustainability-odoo
+ursais:
+- osi-addons
