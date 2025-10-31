@@ -2,6 +2,8 @@ AwesomeFoodCoops:
 - odoo-production
 CybroOdoo:
 - CybroAddons
+GlodoUK:
+- odoo-addons
 Lokavaluto:
 - lokavaluto-addons
 Mint-System:
@@ -27,6 +29,8 @@ akretion:
 - odoo-py3o-report-templates
 altinkaya-opensource:
 - odoo-addons
+apexive:
+- odoo-llm
 avanzosc:
 - odoo-addons
 beescoop:
@@ -132,6 +136,7 @@ oca:
 - knowledge
 - l10n-brazil
 - l10n-france
+- l10n-usa
 - mail
 - maintenance
 - management-system
@@ -207,6 +212,7 @@ oca:
 - stock-weighing
 - storage
 - survey
+- tier-validation
 - timesheet
 - vertical-abbey
 - vertical-agriculture
