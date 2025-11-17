@@ -193,6 +193,11 @@ def make_schema(db):
         )
         """
     )
+    db.execute(
+        """
+        CREATE INDEX IF NOT EXISTS pr_module ON pr (module)
+        """
+    )
 
 
 def upsert_module(db, repo_id, module_name, module_data):

@@ -138,6 +138,11 @@ def make_common_schema(db, with_module):
             )
             """
         )
+        db.execute(
+            """
+            CREATE INDEX IF NOT EXISTS module_name ON module (name)
+            """
+        )
 
 
 def download(path, url):
