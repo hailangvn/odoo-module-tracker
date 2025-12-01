@@ -197,25 +197,23 @@ def analyze_type(path, result):
         result['type'] = 'test'
     elif len(data.get('depends', [])) > 1 and len(data.get('data', [])) == 0:
         result['type'] = 'bundle'
-    elif all([
-        d for d in data.get('data', []) if d.endswith(('.csv', '.xml'))
-    ]) and sum_ext(files, ['.py']) - sum_ext(files, ['__init__.py']) == 0:
+    elif (
+        all(d.startswith('data') for d in data.get('data', []))
+        and sum_ext(files, ['.js', '.xml', 'css'], ['static']) == 0
+        and sum_ext(files, ['.py']) - sum_ext(files, ['__init__.py']) == 0
+    ):
         result['type'] = 'data'
     elif (
         path.name.startswith('theme_')
-        or (sum_ext(files, ['.js', 'css'])
+        or (not path.name.startswith('web_')
+        and  (sum_ext(files, ['.js', 'css'])
             + sum_ext(files, ['.xml'], ['static']))
         / max(sum_ext(files, ['.py', '.xml'])
-            - sum_ext(files, ['.xml'], ['static']), 1) >= 2
+            - sum_ext(files, ['.xml'], ['static']), 1) >= 2)
     ):
         result['type'] = 'website'
-    elif (
-        sum_ext(files, ['.py', '.xml'])
-        / (sum_ext(files, ['.js', 'css']) or 1) >= 2
-    ):
-        result['type'] = 'default'
     else:
-        result['type'] = 'other'
+        result['type'] = 'default'
 
 
 def sum_ext(files, exts, prefixes=['']):
